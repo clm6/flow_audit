@@ -46,9 +46,13 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # CORS configuration - allow specified origins or default to localhost for development
 cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000')
-# Support multiple origins separated by comma
-allowed_origins = [origin.strip() for origin in cors_origins.split(',')]
-CORS(app, origins=allowed_origins, supports_credentials=True)
+# Support multiple origins separated by comma, strip trailing slashes
+allowed_origins = [origin.strip().rstrip('/') for origin in cors_origins.split(',')]
+CORS(app, 
+     origins=allowed_origins, 
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "OPTIONS"])
 
 db = SQLAlchemy(app)
 
