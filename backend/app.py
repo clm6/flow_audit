@@ -410,9 +410,13 @@ def submit_assessment():
         
     except Exception as e:
         db.session.rollback()
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error in submit_assessment: {error_trace}")  # Log to Railway logs
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'details': error_trace if os.environ.get('FLASK_ENV') == 'development' else None
         }), 500
 
 @app.route('/api/download-report/<int:assessment_id>', methods=['GET'])
