@@ -12,6 +12,7 @@ import json
 import os
 from io import BytesIO
 from dotenv import load_dotenv
+import threading
 
 # Load environment variables from .env file
 load_dotenv()
@@ -494,31 +495,60 @@ def submit_assessment():
         db.session.add(assessment)
         db.session.commit()
         
-        # Generate Claude analysis (this might take 10-30 seconds)
-        print(f"Starting Claude analysis for {data['name']}...")
-        try:
-            analysis = generate_claude_analysis(data)
-            print(f"Claude analysis completed for {data['name']}")
-        except Exception as e:
-            print(f"Claude analysis failed: {e}")
-            raise
-        assessment.analysis_result = json.dumps(analysis)
-        assessment.report_generated = True
-        db.session.commit()
+        # Get assessment ID before starting background processing
+        assessment_id = assessment.id
         
-        # Generate PDF report
-        pdf_buffer = generate_pdf_report(assessment, analysis)
+        # Process analysis in background to avoid timeout
+        def process_analysis_background(assessment_id, assessment_data):
+            """Process Claude analysis, PDF generation, and email in background"""
+            with app.app_context():
+                try:
+                    assessment = Assessment.query.get(assessment_id)
+                    if not assessment:
+                        print(f"Assessment {assessment_id} not found")
+                        return
+                    
+                    print(f"Starting Claude analysis for assessment {assessment_id}...")
+                    analysis = generate_claude_analysis(assessment_data)
+                    print(f"Claude analysis completed for assessment {assessment_id}")
+                    
+                    assessment.analysis_result = json.dumps(analysis)
+                    assessment.report_generated = True
+                    db.session.commit()
+                    
+                    # Generate PDF report
+                    pdf_buffer = generate_pdf_report(assessment, analysis)
+                    
+                    # Send email
+                    email_sent = send_report_email(assessment, pdf_buffer)
+                    assessment.report_sent = email_sent
+                    db.session.commit()
+                    
+                    print(f"Background processing completed for assessment {assessment_id}")
+                except Exception as e:
+                    import traceback
+                    error_trace = traceback.format_exc()
+                    print(f"Error in background processing for assessment {assessment_id}: {error_trace}")
+                    # Update assessment with error status
+                    try:
+                        assessment = Assessment.query.get(assessment_id)
+                        if assessment:
+                            assessment.analysis_result = json.dumps({'error': str(e)})
+                            db.session.commit()
+                    except:
+                        pass
         
-        # Send email
-        email_sent = send_report_email(assessment, pdf_buffer)
-        assessment.report_sent = email_sent
-        db.session.commit()
+        # Start background thread
+        thread = threading.Thread(target=process_analysis_background, args=(assessment_id, data))
+        thread.daemon = True
+        thread.start()
         
+        # Return immediately with assessment ID
         return jsonify({
             'success': True,
-            'message': 'Assessment submitted successfully! Check your email for the detailed report.',
-            'assessment_id': assessment.id,
-            'email_sent': email_sent
+            'message': 'Assessment submitted successfully! Your analysis is being processed. You will receive an email when it\'s ready.',
+            'assessment_id': assessment_id,
+            'status': 'processing'
         })
         
     except Exception as e:
