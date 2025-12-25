@@ -44,15 +44,31 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# CORS configuration - allow specified origins or default to localhost for development
+# CORS configuration
 cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000')
 # Support multiple origins separated by comma, strip trailing slashes
 allowed_origins = [origin.strip().rstrip('/') for origin in cors_origins.split(',')]
+
 CORS(app, 
-     origins=allowed_origins, 
-     supports_credentials=True,
-     allow_headers=["Content-Type", "Authorization"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+     resources={
+         r"/api/*": {
+             "origins": allowed_origins,
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization"],
+             "supports_credentials": True
+         }
+     })
+
+# Ensure CORS headers on all responses
+@app.after_request
+def after_request(response):
+    origin = request.headers.get('Origin')
+    if origin in allowed_origins:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    return response
 
 db = SQLAlchemy(app)
 
