@@ -95,7 +95,12 @@ class Assessment(db.Model):
 
 # Create tables
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Warning: Could not create database tables: {e}")
+        print("This is normal if tables already exist or database is not yet available")
 
 def generate_claude_analysis(assessment_data):
     """
