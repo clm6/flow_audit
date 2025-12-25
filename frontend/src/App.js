@@ -563,76 +563,232 @@ function ProcessingStep({ submitAssessment }) {
 // Step 8: Complete
 function CompleteStep({ submissionResult }) {
   const isProcessing = submissionResult?.status === 'processing';
-  const hasDownloadLink = submissionResult?.download_url;
+  const analysis = submissionResult?.analysis;
   const calendlyUrl = submissionResult?.schedule_call_url || 'https://calendly.com/drcraigmiller-careerflowframework/strategy-call';
 
+  // Beautiful results view
+  if (submissionResult?.success && analysis) {
+    return (
+      <div className="step-content complete-step" style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div className="success-icon" style={{ fontSize: '64px', color: '#10b981', marginBottom: '20px' }}>✓</div>
+        <h2 style={{ fontSize: '32px', marginBottom: '10px', color: '#1a1a1a' }}>Your Career Flow Diagnostic Report</h2>
+        <p style={{ fontSize: '18px', color: '#666', marginBottom: '40px' }}>
+          Your personalized analysis is ready. Here's your comprehensive assessment:
+        </p>
+
+        {/* Executive Summary */}
+        <div style={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+          color: 'white', 
+          padding: '30px', 
+          borderRadius: '12px', 
+          marginBottom: '30px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ fontSize: '24px', marginBottom: '15px', fontWeight: '600' }}>Executive Summary</h3>
+          <p style={{ fontSize: '16px', lineHeight: '1.6' }}>{analysis.executive_summary}</p>
+        </div>
+
+        {/* Compensation Gap */}
+        {analysis.compensation_gap && (
+          <div style={{ 
+            background: '#fff', 
+            border: '2px solid #e5e7eb', 
+            borderRadius: '12px', 
+            padding: '30px', 
+            marginBottom: '30px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+          }}>
+            <h3 style={{ fontSize: '24px', marginBottom: '20px', color: '#1a1a1a' }}>💰 Compensation Gap Analysis</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+              <div>
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Market Range</div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#1a1a1a' }}>{analysis.compensation_gap.market_salary_range}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Gap</div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#dc2626' }}>{analysis.compensation_gap.gap_percentage}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Annual Opportunity</div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#059669' }}>{analysis.compensation_gap.annual_opportunity}</div>
+              </div>
+            </div>
+            <div style={{ marginTop: '20px', padding: '15px', background: '#f3f4f6', borderRadius: '8px' }}>
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Key Insight</div>
+              <div style={{ fontSize: '16px', color: '#1a1a1a' }}>{analysis.compensation_gap.key_insight}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Leverage Points */}
+        {analysis.leverage_points && analysis.leverage_points.length > 0 && (
+          <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ fontSize: '24px', marginBottom: '20px', color: '#1a1a1a' }}>🎯 Top Leverage Points</h3>
+            <div style={{ display: 'grid', gap: '20px' }}>
+              {analysis.leverage_points.map((point, index) => (
+                <div key={index} style={{ 
+                  background: '#fff', 
+                  border: '2px solid #e5e7eb', 
+                  borderRadius: '12px', 
+                  padding: '25px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{ fontSize: '20px', fontWeight: '600', color: '#667eea', marginBottom: '15px' }}>
+                    {index + 1}. {point.area}
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Current State</div>
+                    <div style={{ fontSize: '16px', color: '#1a1a1a' }}>{point.current_state}</div>
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Impact</div>
+                    <div style={{ fontSize: '16px', color: '#1a1a1a' }}>{point.impact}</div>
+                  </div>
+                  <div style={{ padding: '12px', background: '#ecfdf5', borderRadius: '8px', borderLeft: '4px solid #10b981' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#059669', marginBottom: '5px' }}>Quick Win</div>
+                    <div style={{ fontSize: '16px', color: '#1a1a1a' }}>{point.quick_win}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Positioning Diagnosis */}
+        {analysis.positioning_diagnosis && (
+          <div style={{ 
+            background: '#fff', 
+            border: '2px solid #e5e7eb', 
+            borderRadius: '12px', 
+            padding: '30px', 
+            marginBottom: '30px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+          }}>
+            <h3 style={{ fontSize: '24px', marginBottom: '20px', color: '#1a1a1a' }}>💬 Positioning Diagnosis</h3>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#1a1a1a' }}>Language Gaps</div>
+              <div style={{ fontSize: '16px', color: '#4b5563', lineHeight: '1.6' }}>{analysis.positioning_diagnosis.language_gaps}</div>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#1a1a1a' }}>Visibility Issues</div>
+              <div style={{ fontSize: '16px', color: '#4b5563', lineHeight: '1.6' }}>{analysis.positioning_diagnosis.visibility_issues}</div>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#1a1a1a' }}>Narrative Coherence</div>
+              <div style={{ fontSize: '16px', color: '#4b5563', lineHeight: '1.6' }}>{analysis.positioning_diagnosis.narrative_coherence}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1a1a1a' }}>Specific Fixes</div>
+              <ul style={{ listStyle: 'none', padding: 0 }}>
+                {analysis.positioning_diagnosis.specific_fixes?.map((fix, index) => (
+                  <li key={index} style={{ 
+                    padding: '12px', 
+                    marginBottom: '8px', 
+                    background: '#f9fafb', 
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    color: '#1a1a1a'
+                  }}>
+                    ✓ {fix}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* 90-Day Roadmap */}
+        {analysis.ninety_day_roadmap && analysis.ninety_day_roadmap.length > 0 && (
+          <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ fontSize: '24px', marginBottom: '20px', color: '#1a1a1a' }}>🗓️ Your 90-Day Roadmap</h3>
+            <div style={{ display: 'grid', gap: '20px' }}>
+              {analysis.ninety_day_roadmap.map((phase, index) => (
+                <div key={index} style={{ 
+                  background: '#fff', 
+                  border: '2px solid #e5e7eb', 
+                  borderRadius: '12px', 
+                  padding: '25px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{ fontSize: '20px', fontWeight: '600', color: '#667eea', marginBottom: '10px' }}>
+                    {phase.week_range}
+                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '15px', color: '#1a1a1a' }}>
+                    {phase.focus}
+                  </div>
+                  <div style={{ marginBottom: '15px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#666' }}>Actions:</div>
+                    <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                      {phase.actions?.map((action, i) => (
+                        <li key={i} style={{ fontSize: '16px', color: '#4b5563', marginBottom: '5px', lineHeight: '1.6' }}>{action}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e40af', marginBottom: '5px' }}>Success Metric</div>
+                    <div style={{ fontSize: '16px', color: '#1a1a1a' }}>{phase.success_metric}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Next Steps CTA */}
+        <div style={{ 
+          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', 
+          color: 'white', 
+          padding: '40px', 
+          borderRadius: '12px', 
+          textAlign: 'center',
+          marginTop: '40px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ fontSize: '28px', marginBottom: '15px', fontWeight: '600' }}>Ready to Implement These Strategies?</h3>
+          <p style={{ fontSize: '18px', marginBottom: '25px', opacity: 0.95 }}>
+            Schedule a free 30-minute strategy session to discuss your specific situation.
+          </p>
+          <a 
+            href={calendlyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary btn-large"
+            style={{ 
+              display: 'inline-block', 
+              textDecoration: 'none',
+              background: 'white',
+              color: '#f5576c',
+              padding: '15px 40px',
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '18px',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+              transition: 'transform 0.2s'
+            }}
+            onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+            onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+          >
+            Schedule Strategy Session
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Processing or error states
   return (
     <div className="step-content complete-step">
-      {submissionResult?.success ? (
+      {submissionResult?.success && isProcessing ? (
         <>
           <div className="success-icon">✓</div>
-          <h2>{isProcessing ? 'Your Assessment is Being Processed!' : 'Your Report is Ready!'}</h2>
+          <h2>Your Assessment is Being Processed!</h2>
           <p className="success-message">
-            {isProcessing ? (
-              <>
-                Your comprehensive Career Flow Diagnostic Report is being generated. 
-                You'll receive an email at <strong>{submissionResult.email || 'your email'}</strong> when it's ready (usually within 2-3 minutes).
-              </>
-            ) : (
-              <>
-                We've sent your comprehensive Career Flow Diagnostic Report to <strong>{submissionResult.email || 'your email'}</strong>
-              </>
-            )}
+            Your comprehensive Career Flow Diagnostic Report is being generated. 
+            This usually takes 30-60 seconds...
           </p>
-          
-          {hasDownloadLink && !isProcessing && (
-            <div className="download-section" style={{ margin: '20px 0', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
-              <h3>📥 Download Your Report</h3>
-              <p>Your PDF report is ready to download:</p>
-              <a 
-                href={submissionResult.download_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="btn-primary btn-large"
-                style={{ display: 'inline-block', marginTop: '10px', textDecoration: 'none' }}
-              >
-                Download PDF Report
-              </a>
-            </div>
-          )}
-
-          {isProcessing && (
-            <div className="processing-note" style={{ margin: '20px 0', padding: '15px', background: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
-              <p>⏳ Your analysis is still processing. The download link will be available in your email when ready (usually within 2-3 minutes).</p>
-            </div>
-          )}
-          
-          <div className="report-highlights">
-            <h3>What's Inside Your Report:</h3>
-            <ul>
-              <li>📊 Detailed compensation gap analysis</li>
-              <li>🎯 Top 3 leverage points for fastest impact</li>
-              <li>💬 Specific positioning improvements</li>
-              <li>🗓️ Your customized 90-day roadmap</li>
-            </ul>
-          </div>
-
-          <div className="next-steps-cta">
-            <h3>Ready to Implement These Strategies?</h3>
-            <p>Schedule a free 30-minute strategy session to discuss your specific situation.</p>
-            <a 
-              href={calendlyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary btn-large"
-              style={{ display: 'inline-block', textDecoration: 'none' }}
-            >
-              Schedule Strategy Session
-            </a>
-          </div>
-
-          <div className="email-note">
-            <p>Don't see the email? Check your spam folder or contact support@careerflow.com</p>
+          <div className="processing-note" style={{ margin: '20px 0', padding: '15px', background: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
+            <p>⏳ Please wait while we analyze your responses...</p>
           </div>
         </>
       ) : (

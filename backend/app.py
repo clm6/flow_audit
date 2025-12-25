@@ -508,64 +508,23 @@ def submit_assessment():
         db.session.add(assessment)
         db.session.commit()
         
-        # Get assessment ID before starting background processing
-        assessment_id = assessment.id
+        # Generate Claude analysis (wait for it to complete)
+        print(f"Starting Claude analysis for {data['name']}...")
+        analysis = generate_claude_analysis(data)
+        print(f"Claude analysis completed for {data['name']}")
         
-        # Process analysis in background to avoid timeout
-        def process_analysis_background(assessment_id, assessment_data):
-            """Process Claude analysis, PDF generation, and email in background"""
-            with app.app_context():
-                try:
-                    assessment = Assessment.query.get(assessment_id)
-                    if not assessment:
-                        print(f"Assessment {assessment_id} not found")
-                        return
-                    
-                    print(f"Starting Claude analysis for assessment {assessment_id}...")
-                    analysis = generate_claude_analysis(assessment_data)
-                    print(f"Claude analysis completed for assessment {assessment_id}")
-                    
-                    assessment.analysis_result = json.dumps(analysis)
-                    assessment.report_generated = True
-                    db.session.commit()
-                    
-                    # Generate PDF report
-                    pdf_buffer = generate_pdf_report(assessment, analysis)
-                    
-                    # Send email
-                    email_sent = send_report_email(assessment, pdf_buffer)
-                    assessment.report_sent = email_sent
-                    db.session.commit()
-                    
-                    print(f"Background processing completed for assessment {assessment_id}")
-                except Exception as e:
-                    import traceback
-                    error_trace = traceback.format_exc()
-                    print(f"Error in background processing for assessment {assessment_id}: {error_trace}")
-                    # Update assessment with error status
-                    try:
-                        assessment = Assessment.query.get(assessment_id)
-                        if assessment:
-                            assessment.analysis_result = json.dumps({'error': str(e)})
-                            db.session.commit()
-                    except:
-                        pass
+        # Save analysis to database
+        assessment.analysis_result = json.dumps(analysis)
+        assessment.report_generated = True
+        db.session.commit()
         
-        # Start background thread
-        thread = threading.Thread(target=process_analysis_background, args=(assessment_id, data))
-        thread.daemon = True
-        thread.start()
-        
-        # Get base URL for download link
-        base_url = os.environ.get('API_BASE_URL', request.url_root.rstrip('/'))
-        
-        # Return immediately with assessment ID and download link
+        # Return analysis results directly (skip PDF and email)
         return jsonify({
             'success': True,
-            'message': 'Assessment submitted successfully! Your analysis is being processed. You will receive an email when it\'s ready.',
-            'assessment_id': assessment_id,
-            'status': 'processing',
-            'download_url': f'{base_url}/api/download-report/{assessment_id}',
+            'message': 'Assessment completed successfully!',
+            'assessment_id': assessment.id,
+            'status': 'completed',
+            'analysis': analysis,
             'schedule_call_url': 'https://calendly.com/drcraigmiller-careerflowframework/strategy-call'
         })
         
