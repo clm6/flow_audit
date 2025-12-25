@@ -619,7 +619,7 @@ function CompleteStep({ submissionResult }) {
 
           <div className="next-steps-cta">
             <h3>Ready to Implement These Strategies?</h3>
-            <p>Schedule a free strategy session to discuss your specific situation and create a personalized plan.</p>
+            <p>Schedule a free 30-minute strategy session to discuss your specific situation.</p>
             <a 
               href={calendlyUrl}
               target="_blank"
@@ -627,7 +627,7 @@ function CompleteStep({ submissionResult }) {
               className="btn-primary btn-large"
               style={{ display: 'inline-block', textDecoration: 'none' }}
             >
-              Schedule Strategy Call
+              Schedule Strategy Session
             </a>
           </div>
 
