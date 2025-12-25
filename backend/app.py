@@ -58,6 +58,26 @@ CORS(app,
      expose_headers=None,
      max_age=3600)
 
+# Explicit CORS handler as backup - ensure headers are always set
+@app.after_request
+def add_cors_headers(response):
+    """Explicitly add CORS headers to all responses"""
+    origin = request.headers.get('Origin')
+    if origin:
+        # Check if origin is in allowed list (with flexible matching)
+        origin_normalized = origin.rstrip('/')
+        for allowed in allowed_origins:
+            allowed_normalized = allowed.rstrip('/')
+            if origin_normalized == allowed_normalized or origin == allowed:
+                response.headers['Access-Control-Allow-Origin'] = origin
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
+                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+                if request.method == 'OPTIONS':
+                    response.headers['Access-Control-Max-Age'] = '3600'
+                break
+    return response
+
 db = SQLAlchemy(app)
 
 # Database Models
@@ -368,8 +388,14 @@ def submit_assessment():
     Accept assessment submission, generate Claude analysis, create PDF, send email
     """
     if request.method == 'OPTIONS':
-        # Handle CORS preflight
-        return '', 200
+        # Handle CORS preflight with explicit headers
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Max-Age'] = '3600'
+        return response, 200
     
     try:
         data = request.json
