@@ -49,30 +49,14 @@ cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000')
 # Support multiple origins separated by comma, strip trailing slashes
 allowed_origins = [origin.strip().rstrip('/') for origin in cors_origins.split(',')]
 
-# Apply CORS to all routes
+# Apply CORS to all routes - Flask-CORS handles everything automatically
 CORS(app, 
      origins=allowed_origins,
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"],
-     supports_credentials=True)
-
-# Ensure CORS headers on all responses (backup)
-@app.after_request
-def after_request(response):
-    origin = request.headers.get('Origin')
-    if origin:
-        # Normalize origin (remove trailing slash)
-        normalized_origin = origin.rstrip('/')
-        # Check if origin matches any allowed origin (with or without trailing slash)
-        if any(normalized_origin == allowed.rstrip('/') or origin == allowed for allowed in allowed_origins):
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-            # Handle preflight requests
-            if request.method == 'OPTIONS':
-                response.headers['Access-Control-Max-Age'] = '3600'
-    return response
+     supports_credentials=True,
+     expose_headers=None,
+     max_age=3600)
 
 db = SQLAlchemy(app)
 
