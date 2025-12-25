@@ -78,6 +78,36 @@ def add_cors_headers(response):
                 break
     return response
 
+# Global error handler to catch all exceptions and return with CORS headers
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Handle all exceptions and return with CORS headers"""
+    import traceback
+    error_trace = traceback.format_exc()
+    print(f"Unhandled exception: {error_trace}")
+    
+    # Create error response
+    response = jsonify({
+        'success': False,
+        'error': str(e),
+        'details': error_trace if os.environ.get('FLASK_ENV') == 'development' else None
+    })
+    
+    # Add CORS headers to error response
+    origin = request.headers.get('Origin') if request else None
+    if origin:
+        origin_normalized = origin.rstrip('/')
+        for allowed in allowed_origins:
+            allowed_normalized = allowed.rstrip('/')
+            if origin_normalized == allowed_normalized or origin == allowed:
+                response.headers['Access-Control-Allow-Origin'] = origin
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
+                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+                break
+    
+    return response, 500
+
 db = SQLAlchemy(app)
 
 # Database Models
