@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-import requests
+import anthropic
 import json
 import os
 from io import BytesIO
@@ -88,7 +88,7 @@ class Assessment(db.Model):
     lifestyle_fit = db.Column(db.Integer)  # 1-10 scale
     energy_level = db.Column(db.Integer)  # 1-10 scale
     
-    # AI Analysis (stored as JSON)
+    # Claude Analysis (stored as JSON)
     analysis_result = db.Column(db.Text)
     report_generated = db.Column(db.Boolean, default=False)
     report_sent = db.Column(db.Boolean, default=False)
@@ -102,12 +102,11 @@ with app.app_context():
         print(f"Warning: Could not create database tables: {e}")
         print("This is normal if tables already exist or database is not yet available")
 
-def generate_ollama_analysis(assessment_data):
+def generate_claude_analysis(assessment_data):
     """
-    Use Ollama API to analyze assessment and generate personalized report
+    Use Claude API to analyze assessment and generate personalized report
     """
-    ollama_url = os.environ.get("OLLAMA_API_URL", "http://localhost:11434")
-    model = os.environ.get("OLLAMA_MODEL", "llama3.2")
+    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     
     prompt = f"""You are an expert STEM career strategist with a PhD in Bioengineering and experience leading utility operations. You're analyzing a career diagnostic assessment for a client who wants to increase their compensation by 10-30% through strategic positioning.
 
@@ -179,50 +178,26 @@ Generate a comprehensive analysis following the Career Flow Framework. Structure
   "next_step": "Clear call to action for working together"
 }}
 
-Be direct about gaps - they've completed this assessment because they know something's wrong. Use your PhD + utility leadership credibility. Tie every recommendation to compensation impact. Use Career Flow Framework language (alignment, positioning, strategic value).
+Be direct about gaps - they've completed this assessment because they know something's wrong. Use your PhD + utility leadership credibility. Tie every recommendation to compensation impact. Use Career Flow Framework language (alignment, positioning, strategic value)."""
 
-IMPORTANT: Return ONLY valid JSON. Do not include markdown code blocks or any other text."""
-
-    try:
-        response = requests.post(
-            f"{ollama_url}/api/generate",
-            json={
-                "model": model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.7,
-                    "num_predict": 4000
-                }
-            },
-            timeout=120  # 2 minute timeout for large responses
-        )
-        response.raise_for_status()
-        
-        # Parse Ollama's response
-        response_data = response.json()
-        response_text = response_data.get("response", "")
-        
-        # Extract JSON from response (might wrap it in markdown)
-        if "```json" in response_text:
-            json_start = response_text.find("```json") + 7
-            json_end = response_text.find("```", json_start)
-            response_text = response_text[json_start:json_end].strip()
-        elif "```" in response_text:
-            # Handle case where it's just ``` without json
-            json_start = response_text.find("```") + 3
-            json_end = response_text.find("```", json_start)
-            if json_end > json_start:
-                response_text = response_text[json_start:json_end].strip()
-        
-        return json.loads(response_text)
-    except requests.exceptions.RequestException as e:
-        print(f"Ollama API error: {e}")
-        raise Exception(f"Failed to generate analysis: {str(e)}")
-    except json.JSONDecodeError as e:
-        print(f"JSON parsing error: {e}")
-        print(f"Response text: {response_text[:500]}...")
-        raise Exception(f"Failed to parse analysis response: {str(e)}")
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=4000,
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
+    
+    # Parse Claude's response
+    response_text = message.content[0].text
+    
+    # Extract JSON from response (Claude might wrap it in markdown)
+    if "```json" in response_text:
+        json_start = response_text.find("```json") + 7
+        json_end = response_text.find("```", json_start)
+        response_text = response_text[json_start:json_end].strip()
+    
+    return json.loads(response_text)
 
 def generate_pdf_report(assessment, analysis):
     """
@@ -417,8 +392,8 @@ def submit_assessment():
         db.session.add(assessment)
         db.session.commit()
         
-        # Generate Ollama analysis
-        analysis = generate_ollama_analysis(data)
+        # Generate Claude analysis
+        analysis = generate_claude_analysis(data)
         assessment.analysis_result = json.dumps(analysis)
         assessment.report_generated = True
         db.session.commit()
