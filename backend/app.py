@@ -52,7 +52,7 @@ CORS(app,
      origins=allowed_origins, 
      supports_credentials=True,
      allow_headers=["Content-Type", "Authorization"],
-     methods=["GET", "POST", "OPTIONS"])
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 db = SQLAlchemy(app)
 
@@ -358,11 +358,15 @@ Career Flow Framework
         return False
 
 # API Endpoints
-@app.route('/api/submit-assessment', methods=['POST'])
+@app.route('/api/submit-assessment', methods=['POST', 'OPTIONS'])
 def submit_assessment():
     """
     Accept assessment submission, generate Claude analysis, create PDF, send email
     """
+    if request.method == 'OPTIONS':
+        # Handle CORS preflight
+        return '', 200
+    
     try:
         data = request.json
         
