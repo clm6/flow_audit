@@ -115,9 +115,9 @@ Name: {assessment_data['name']}
 Current Role: {assessment_data['role']}
 Industry: {assessment_data['industry']}
 Location: {assessment_data['location']}
-Current Salary: ${assessment_data['current_salary']:,}
-Years Experience: {assessment_data['years_experience']}
-Last Raise: {assessment_data['last_raise_percent']}%
+Current Salary: ${int(assessment_data['current_salary']):,}
+Years Experience: {int(assessment_data['years_experience'])}
+Last Raise: {float(assessment_data['last_raise_percent'])}%
 
 TECHNICAL PROFILE:
 Skills: {assessment_data['technical_skills']}
