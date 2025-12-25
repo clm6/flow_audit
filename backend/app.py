@@ -130,7 +130,11 @@ def generate_claude_analysis(assessment_data):
     """
     Use Claude API to analyze assessment and generate personalized report
     """
-    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
+    
+    client = anthropic.Anthropic(api_key=api_key)
     
     prompt = f"""You are an expert STEM career strategist with a PhD in Bioengineering and experience leading utility operations. You're analyzing a career diagnostic assessment for a client who wants to increase their compensation by 10-30% through strategic positioning.
 
@@ -204,24 +208,36 @@ Generate a comprehensive analysis following the Career Flow Framework. Structure
 
 Be direct about gaps - they've completed this assessment because they know something's wrong. Use your PhD + utility leadership credibility. Tie every recommendation to compensation impact. Use Career Flow Framework language (alignment, positioning, strategic value)."""
 
-    message = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=4000,
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-    
-    # Parse Claude's response
-    response_text = message.content[0].text
-    
-    # Extract JSON from response (Claude might wrap it in markdown)
-    if "```json" in response_text:
-        json_start = response_text.find("```json") + 7
-        json_end = response_text.find("```", json_start)
-        response_text = response_text[json_start:json_end].strip()
-    
-    return json.loads(response_text)
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4000,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            timeout=60.0  # 60 second timeout
+        )
+        
+        # Parse Claude's response
+        response_text = message.content[0].text
+        
+        # Extract JSON from response (Claude might wrap it in markdown)
+        if "```json" in response_text:
+            json_start = response_text.find("```json") + 7
+            json_end = response_text.find("```", json_start)
+            response_text = response_text[json_start:json_end].strip()
+        
+        return json.loads(response_text)
+    except anthropic.APIError as e:
+        print(f"Anthropic API error: {e}")
+        raise Exception(f"Failed to generate analysis: {str(e)}")
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing error: {e}")
+        print(f"Response text: {response_text[:500] if 'response_text' in locals() else 'No response'}")
+        raise Exception(f"Failed to parse analysis response: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error in generate_claude_analysis: {e}")
+        raise
 
 def generate_pdf_report(assessment, analysis):
     """
@@ -460,11 +476,26 @@ def submit_assessment():
         import traceback
         error_trace = traceback.format_exc()
         print(f"Error in submit_assessment: {error_trace}")  # Log to Railway logs
-        return jsonify({
+        
+        # Return error response with CORS headers
+        response = jsonify({
             'success': False,
             'error': str(e),
             'details': error_trace if os.environ.get('FLASK_ENV') == 'development' else None
-        }), 500
+        })
+        
+        # Ensure CORS headers are on error response too
+        origin = request.headers.get('Origin')
+        if origin:
+            origin_normalized = origin.rstrip('/')
+            for allowed in allowed_origins:
+                allowed_normalized = allowed.rstrip('/')
+                if origin_normalized == allowed_normalized or origin == allowed:
+                    response.headers['Access-Control-Allow-Origin'] = origin
+                    response.headers['Access-Control-Allow-Credentials'] = 'true'
+                    break
+        
+        return response, 500
 
 @app.route('/api/download-report/<int:assessment_id>', methods=['GET'])
 def download_report(assessment_id):
