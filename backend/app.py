@@ -362,6 +362,14 @@ def generate_pdf_report(assessment, analysis):
     story.append(Spacer(1, 0.3*inch))
     story.append(Paragraph("Next Step", heading_style))
     story.append(Paragraph(analysis['next_step'], body_style))
+    story.append(Spacer(1, 0.2*inch))
+    
+    # Schedule a Strategy Call
+    calendly_link = "https://calendly.com/drcraigmiller-careerflowframework/strategy-call"
+    story.append(Paragraph("<b>Ready to Take Action?</b>", heading_style))
+    story.append(Paragraph(f"Schedule your strategy call: <link href='{calendly_link}' color='blue'>{calendly_link}</link>", body_style))
+    story.append(Spacer(1, 0.2*inch))
+    story.append(Paragraph("During this call, we'll discuss how to implement the strategies outlined in this report and create a personalized plan to increase your compensation.", body_style))
     
     # Build PDF
     doc.build(story)
@@ -400,7 +408,11 @@ Key highlights from your assessment:
 • Specific positioning improvements
 • Your customized 90-day roadmap
 
-Ready to discuss how to implement these strategies? Schedule a strategy session: [CALENDAR LINK]
+Ready to discuss how to implement these strategies? Schedule your strategy call:
+
+https://calendly.com/drcraigmiller-careerflowframework/strategy-call
+
+During this call, we'll discuss how to implement the strategies outlined in your report and create a personalized plan to increase your compensation.
 
 Best regards,
 Craig
@@ -543,12 +555,17 @@ def submit_assessment():
         thread.daemon = True
         thread.start()
         
-        # Return immediately with assessment ID
+        # Get base URL for download link
+        base_url = os.environ.get('API_BASE_URL', request.url_root.rstrip('/'))
+        
+        # Return immediately with assessment ID and download link
         return jsonify({
             'success': True,
             'message': 'Assessment submitted successfully! Your analysis is being processed. You will receive an email when it\'s ready.',
             'assessment_id': assessment_id,
-            'status': 'processing'
+            'status': 'processing',
+            'download_url': f'{base_url}/api/download-report/{assessment_id}',
+            'schedule_call_url': 'https://calendly.com/drcraigmiller-careerflowframework/strategy-call'
         })
         
     except Exception as e:
@@ -577,6 +594,45 @@ def submit_assessment():
         
         return response, 500
 
+@app.route('/api/assessment-status/<int:assessment_id>', methods=['GET'])
+def get_assessment_status(assessment_id):
+    """
+    Check the status of an assessment (processing, completed, or error)
+    """
+    assessment = Assessment.query.get_or_404(assessment_id)
+    
+    base_url = os.environ.get('API_BASE_URL', request.url_root.rstrip('/'))
+    
+    if not assessment.analysis_result:
+        return jsonify({
+            'status': 'processing',
+            'message': 'Your analysis is still being processed. Please check back in a few minutes.',
+            'assessment_id': assessment_id
+        })
+    
+    # Check if there's an error in the analysis
+    try:
+        analysis = json.loads(assessment.analysis_result)
+        if 'error' in analysis:
+            return jsonify({
+                'status': 'error',
+                'message': 'An error occurred during processing.',
+                'error': analysis.get('error'),
+                'assessment_id': assessment_id
+            })
+    except:
+        pass
+    
+    return jsonify({
+        'status': 'completed',
+        'message': 'Your report is ready!',
+        'assessment_id': assessment_id,
+        'report_generated': assessment.report_generated,
+        'report_sent': assessment.report_sent,
+        'download_url': f'{base_url}/api/download-report/{assessment_id}',
+        'schedule_call_url': 'https://calendly.com/drcraigmiller-careerflowframework/strategy-call'
+    })
+
 @app.route('/api/download-report/<int:assessment_id>', methods=['GET'])
 def download_report(assessment_id):
     """
@@ -585,7 +641,15 @@ def download_report(assessment_id):
     assessment = Assessment.query.get_or_404(assessment_id)
     
     if not assessment.analysis_result:
-        return jsonify({'error': 'Report not generated yet'}), 404
+        return jsonify({'error': 'Report not generated yet. Please wait a few minutes and try again.'}), 404
+    
+    # Check for errors
+    try:
+        analysis = json.loads(assessment.analysis_result)
+        if 'error' in analysis:
+            return jsonify({'error': 'Report generation failed. Please contact support.'}), 500
+    except:
+        pass
     
     analysis = json.loads(assessment.analysis_result)
     pdf_buffer = generate_pdf_report(assessment, analysis)
