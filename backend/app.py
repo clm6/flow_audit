@@ -452,7 +452,21 @@ def submit_assessment():
         return response, 200
     
     try:
+        # Quick validation first
+        if not request.json:
+            return jsonify({'success': False, 'error': 'No JSON data provided'}), 400
+        
         data = request.json
+        
+        # Validate required fields quickly
+        required_fields = ['email', 'name', 'current_salary', 'years_experience', 'role']
+        missing = [field for field in required_fields if field not in data]
+        if missing:
+            return jsonify({'success': False, 'error': f'Missing required fields: {", ".join(missing)}'}), 400
+        
+        # Check API key early
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            return jsonify({'success': False, 'error': 'ANTHROPIC_API_KEY not configured'}), 500
         
         # Create assessment record
         assessment = Assessment(
@@ -480,8 +494,14 @@ def submit_assessment():
         db.session.add(assessment)
         db.session.commit()
         
-        # Generate Claude analysis
-        analysis = generate_claude_analysis(data)
+        # Generate Claude analysis (this might take 10-30 seconds)
+        print(f"Starting Claude analysis for {data['name']}...")
+        try:
+            analysis = generate_claude_analysis(data)
+            print(f"Claude analysis completed for {data['name']}")
+        except Exception as e:
+            print(f"Claude analysis failed: {e}")
+            raise
         assessment.analysis_result = json.dumps(analysis)
         assessment.report_generated = True
         db.session.commit()
