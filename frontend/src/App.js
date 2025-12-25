@@ -585,7 +585,7 @@ function CompleteStep({ submissionResult }) {
             )}
           </p>
           
-          {hasDownloadLink && (
+          {hasDownloadLink && !isProcessing && (
             <div className="download-section" style={{ margin: '20px 0', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
               <h3>📥 Download Your Report</h3>
               <p>Your PDF report is ready to download:</p>
@@ -603,7 +603,7 @@ function CompleteStep({ submissionResult }) {
 
           {isProcessing && (
             <div className="processing-note" style={{ margin: '20px 0', padding: '15px', background: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
-              <p>⏳ Your analysis is still processing. The download link will be available in your email when ready.</p>
+              <p>⏳ Your analysis is still processing. The download link will be available in your email when ready (usually within 2-3 minutes).</p>
             </div>
           )}
           
