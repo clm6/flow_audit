@@ -562,15 +562,50 @@ function ProcessingStep({ submitAssessment }) {
 
 // Step 8: Complete
 function CompleteStep({ submissionResult }) {
+  const isProcessing = submissionResult?.status === 'processing';
+  const hasDownloadLink = submissionResult?.download_url;
+  const calendlyUrl = submissionResult?.schedule_call_url || 'https://calendly.com/drcraigmiller-careerflowframework/strategy-call';
+
   return (
     <div className="step-content complete-step">
       {submissionResult?.success ? (
         <>
           <div className="success-icon">✓</div>
-          <h2>Your Report is Ready!</h2>
+          <h2>{isProcessing ? 'Your Assessment is Being Processed!' : 'Your Report is Ready!'}</h2>
           <p className="success-message">
-            We've sent your comprehensive Career Flow Diagnostic Report to <strong>{submissionResult.email}</strong>
+            {isProcessing ? (
+              <>
+                Your comprehensive Career Flow Diagnostic Report is being generated. 
+                You'll receive an email at <strong>{submissionResult.email || 'your email'}</strong> when it's ready (usually within 2-3 minutes).
+              </>
+            ) : (
+              <>
+                We've sent your comprehensive Career Flow Diagnostic Report to <strong>{submissionResult.email || 'your email'}</strong>
+              </>
+            )}
           </p>
+          
+          {hasDownloadLink && (
+            <div className="download-section" style={{ margin: '20px 0', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
+              <h3>📥 Download Your Report</h3>
+              <p>Your PDF report is ready to download:</p>
+              <a 
+                href={submissionResult.download_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="btn-primary btn-large"
+                style={{ display: 'inline-block', marginTop: '10px', textDecoration: 'none' }}
+              >
+                Download PDF Report
+              </a>
+            </div>
+          )}
+
+          {isProcessing && (
+            <div className="processing-note" style={{ margin: '20px 0', padding: '15px', background: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
+              <p>⏳ Your analysis is still processing. The download link will be available in your email when ready.</p>
+            </div>
+          )}
           
           <div className="report-highlights">
             <h3>What's Inside Your Report:</h3>
@@ -584,10 +619,16 @@ function CompleteStep({ submissionResult }) {
 
           <div className="next-steps-cta">
             <h3>Ready to Implement These Strategies?</h3>
-            <p>Schedule a free 30-minute strategy session to discuss your specific situation.</p>
-            <button className="btn-primary btn-large">
-              Schedule Strategy Session
-            </button>
+            <p>Schedule a free strategy session to discuss your specific situation and create a personalized plan.</p>
+            <a 
+              href={calendlyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary btn-large"
+              style={{ display: 'inline-block', textDecoration: 'none' }}
+            >
+              Schedule Strategy Call
+            </a>
           </div>
 
           <div className="email-note">
@@ -599,7 +640,7 @@ function CompleteStep({ submissionResult }) {
           <div className="error-icon">⚠️</div>
           <h2>Something Went Wrong</h2>
           <p className="error-message">
-            We encountered an error generating your report. Please try again or contact support.
+            {submissionResult?.error || 'We encountered an error generating your report. Please try again or contact support.'}
           </p>
           <button className="btn-primary" onClick={() => window.location.reload()}>
             Start Over
