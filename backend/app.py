@@ -367,7 +367,8 @@ def generate_pdf_report(assessment, analysis):
     # Schedule a Strategy Call
     calendly_link = "https://calendly.com/drcraigmiller-careerflowframework/strategy-call"
     story.append(Paragraph("<b>Ready to Take Action?</b>", heading_style))
-    story.append(Paragraph(f"Schedule your strategy call: <link href='{calendly_link}' color='blue'>{calendly_link}</link>", body_style))
+    story.append(Paragraph(f"Schedule your strategy call:", body_style))
+    story.append(Paragraph(calendly_link, body_style))
     story.append(Spacer(1, 0.2*inch))
     story.append(Paragraph("During this call, we'll discuss how to implement the strategies outlined in this report and create a personalized plan to increase your compensation.", body_style))
     
